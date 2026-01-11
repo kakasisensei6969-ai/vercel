@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       উপরের তথ্যের ভিত্তিতে উত্তর দাও। যদি প্রশ্নটি এই তথ্যের বাইরে হয়, তবে তোমার সাধারণ জ্ঞান ব্যবহার করো। ভাষা হবে বাংলা।
     `;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b:generateContent?key=${API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
