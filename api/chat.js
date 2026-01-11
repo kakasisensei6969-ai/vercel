@@ -6,38 +6,72 @@ export default async function handler(req, res) {
 
   try {
     const { message } = req.body;
-    const API_KEY = process.env.GEMINI_API_KEY;
 
-    // JSON ফাইলটি পড়ার নিয়ম
+    // ১. data.json থেকে আপনার কাস্টম তথ্য পড়া
     const jsonPath = path.join(process.cwd(), 'data.json');
     const fileContents = fs.readFileSync(jsonPath, 'utf8');
     const myData = JSON.parse(fileContents);
 
-    // জেমিনিকে দেওয়ার জন্য ইন্সট্রাকশন তৈরি
-    const context = `
+    // জেমিনি এবং গ্রক উভয়ের জন্য সাধারণ ইনস্ট্রাকশন
+    const systemInstruction = `
       তুমি একজন স্মার্ট অ্যাসিস্ট্যান্ট। তোমার নাম ${myData.bot_name}।
       তোমাকে তৈরি করেছেন ${myData.creator}।
       আমাদের অফিস: ${myData.office}।
       আমাদের সার্ভিসসমূহ: ${myData.services.join(', ')}।
-      কিছু সাধারণ প্রশ্নোত্তর: ${JSON.stringify(myData.faq)}
+      সাধারণ প্রশ্নোত্তর: ${JSON.stringify(myData.faq)}
       
-      উপরের তথ্যের ভিত্তিতে উত্তর দাও। যদি প্রশ্নটি এই তথ্যের বাইরে হয়, তবে তোমার সাধারণ জ্ঞান ব্যবহার করো। ভাষা হবে বাংলা।
+      উপরের তথ্যের ভিত্তিতে উত্তর দাও। যদি প্রশ্নটি তথ্যের বাইরে হয়, তবে তোমার সাধারণ জ্ঞান ব্যবহার করো। ভাষা হবে বাংলা।
     `;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/
-gemini-3-flash:generateContent?key=${API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${context}\n\nUser Question: ${message}` }] }]
-      })
-    });
+    // ২. প্রথমে জেমিনি (Gemini) ট্রাই করবে
+    try {
+      const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+      const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemInstruction}\n\nইউজারের প্রশ্ন: ${message}` }] }]
+        })
+      });
 
-    const data = await response.json();
-    const botReply = data.candidates[0].content.parts[0].text;
+      const geminiData = await geminiResponse.json();
 
-    return res.status(200).json({ reply: botReply });
+      if (geminiData.candidates && geminiData.candidates[0]) {
+        const reply = geminiData.candidates[0].content.parts[0].text;
+        return res.status(200).json({ reply, source: "Gemini" });
+      } else {
+        throw new Error("Gemini Limit Reached");
+      }
+
+    } catch (geminiError) {
+      console.log("Gemini failed, switching to Groq...");
+
+      // ৩. জেমিনি ফেইল করলে গ্রক (Groq) ব্যাকআপ হিসেবে কাজ করবে
+      const GROQ_API_KEY = process.env.GROQ_API_KEY;
+      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-120b",
+          messages: [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: message }
+          ]
+        })
+      });
+
+      const groqData = await groqResponse.json();
+      const reply = groqData.choices[0].message.content;
+      return res.status(200).json({ reply, source: "Groq" });
+    }
+
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ 
+      reply: "দুঃখিত, আমি বর্তমানে কোনো সার্ভিস থেকেই উত্তর পাচ্ছি না। দয়া করে কিছুক্ষণ পর চেষ্টা করুন।", 
+      error: error.message 
+    });
   }
 }
