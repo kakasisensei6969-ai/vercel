@@ -1,3 +1,15 @@
+body, input, button {
+    font-family: 'Hind Siliguri', sans-serif !important;
+}
+
+/* মেসেজ বক্সের জন্য আলাদাভাবে ফন্টটি নিশ্চিত করা */
+.message {
+    font-family: 'Hind Siliguri', sans-serif;
+    line-height: 1.6; /* লেখাগুলো যেন একটার ওপর আরেকটা না উঠে যায় */
+    font-size: 16px;
+}
+
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f0f2f5;
