@@ -1,6 +1,14 @@
 {
-  "bot_name": "Jadu Bot",
-  "creator": "Jahidul Islam",
+  "bot_name": [
+    "জাদু বট",
+    "Jadu Bot",
+    "Jadu"
+  ],
+  "creator": [
+    "Jahidul Islam",
+    "জাহিদুল ইসলাম",
+    "জাহিদ"
+  ],
   "office": "বরিশাল, বাংলাদেশ",
   "services": [
     "মজা করা",
