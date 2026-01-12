@@ -93,7 +93,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     return res.status(500).json({ 
-      reply: "দুঃখিত, আমি বর্তমানে কোনো সার্ভিস থেকেই উত্তর পাচ্ছি না।", 
+      reply: "আমি এটি নিয়ে বলতে পারছিনা বলে দুঃখিত । অন্য কী জানতে চাও বলো..", 
       error: error.message 
     });
   }
