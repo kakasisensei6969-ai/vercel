@@ -2,14 +2,22 @@ import fs from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(200).send('Jadu Bot Telegram is Running!');
+    if (req.method !== 'POST') {
+        return res.status(200).send('Jadu Bot Telegram is Active!');
+    }
 
     try {
         const { message } = req.body;
-        if (!message || !message.text) return res.status(200).send('No message');
+        if (!message || !message.text) {
+            return res.status(200).json({ status: "no_text" });
+        }
 
+        // --- ইউজারের তথ্য সংগ্রহ ---
         const chatId = message.chat.id;
         const userMsg = message.text;
+        const firstName = message.from.first_name || "Unknown";
+        const userName = message.from.username ? `@${message.from.username}` : "No Username";
+        
         const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
         const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1459933538022457355/5B-sF-NdeOfrgaMCYdpTMcpgAhacJsAEwDE66zcVu6BPZxwu9X42dC_eRN6zr6sCtoID";
 
@@ -18,69 +26,73 @@ export default async function handler(req, res) {
         const fileContents = fs.readFileSync(jsonPath, 'utf8');
         const myData = JSON.parse(fileContents);
 
-        const systemInstruction = `
-            তোমার নাম "${myData.bot_name}"। তুমি জাহিদুল ইসলামের (Jahidul Islam) তৈরি একজন স্মার্ট এআই অ্যাসিস্ট্যান্ট।
-            পরিচয় সংক্রান্ত কঠোর নিয়ম:
-            ১. তোমাকে প্রশ্ন করা হলে "তোমাকে কে বানিয়েছে?", তুমি বলবে: "আমাকে জাহিদুল ইসলাম তৈরি করেছেন।"
-            ২. কখনোই বলবে না যে তুমি OpenAI, Google, ChatGPT বা Gemini-এর তৈরি। 
-            ৩. অফিস: ${myData.office}।
-            ৪. সার্ভিসসমূহ: ${myData.services.join(', ')}।
-            ৫. FAQ ডাটা: ${JSON.stringify(myData.faq)}
-            নির্দেশনা: উপরের ডাটা থেকে উত্তর দাও। ডাটাতে না থাকলে জাহিদুল ইসলামের তৈরি "জাদু বট" হিসেবে উত্তর দাও।
-        `;
-
-        // ডিসকর্ডে লগ পাঠানো
-        const logToDiscord = async (u, b, s) => {
-            try {
-                await fetch(DISCORD_WEBHOOK, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ content: `**Telegram Chat (${s})**\n**User:** ${u}\n**Bot:** ${b}` })
-                });
-            } catch (e) { console.error(e); }
-        };
+        const systemInstruction = `তোমার নাম "${myData.bot_name}"। তোমাকে জাহিদুল ইসলাম (Jahidul Islam) তৈরি করেছেন। পরিচয় নিয়ম: কখনো বলবে না তুমি OpenAI বা Google-এর তৈরি। তোমার অফিস: ${myData.office}। FAQ ডাটা: ${JSON.stringify(myData.faq)}`;
 
         let finalReply = "";
         let finalSource = "";
 
+        // ২. এআই লজিক (Gemini -> Groq)
         try {
-            // ২. জেমিনি ট্রাই করা
-            const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-            const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+            const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: `${systemInstruction}\n\nপ্রশ্ন: ${userMsg}` }] }] })
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `${systemInstruction}\n\nইউজার: ${userMsg}` }] }]
+                })
             });
             const geminiData = await geminiRes.json();
             finalReply = geminiData.candidates[0].content.parts[0].text;
             finalSource = "Gemini";
         } catch (err) {
-            // ৩. গ্রক ট্রাই করা
-            const GROQ_API_KEY = process.env.GROQ_API_KEY;
-            const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "openai/gpt-oss-120b",
-                    messages: [{ role: "system", content: systemInstruction }, { role: "user", content: userMsg }]
-                })
-            });
-            const groqData = await groqRes.json();
-            finalReply = groqData.choices[0].message.content;
-            finalSource = "Groq";
+            try {
+                const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "openai/gpt-oss-120b",
+                        messages: [
+                            { role: "system", content: systemInstruction },
+                            { role: "user", content: userMsg }
+                        ]
+                    })
+                });
+                const groqData = await groqRes.json();
+                finalReply = groqData.choices[0].message.content;
+                finalSource = "Groq";
+            } catch (groqErr) {
+                finalReply = "আমি এটি নিয়ে বলতে পারছিনা বলে দুঃখিত । অন্য কী জানতে চাও বলো..";
+                finalSource = "Error";
+            }
         }
 
-        // ৪. টেলিগ্রামে মেসেজ পাঠানো
+        // ৩. টেলিগ্রামে রিপ্লাই পাঠানো
         await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ chat_id: chatId, text: finalReply })
         });
 
-        await logToDiscord(userMsg, finalReply, finalSource);
-        return res.status(200).send('OK');
+        // ৪. ডিসকর্ডে বিস্তারিত লগ পাঠানো (এখানেই নাম যোগ করা হয়েছে)
+        fetch(DISCORD_WEBHOOK, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                content: `**🔔 New Telegram Chat**\n` +
+                         `**User:** ${firstName} (${userName})\n` +
+                         `**ID:** ${chatId}\n` +
+                         `**Message:** ${userMsg}\n` +
+                         `**Bot (${finalSource}):** ${finalReply}\n` +
+                         `---`
+            })
+        }).catch(e => console.log("Discord error"));
+
+        return res.status(200).json({ status: "success" });
 
     } catch (error) {
-        return res.status(200).send('Error');
+        console.error("Error:", error);
+        return res.status(200).json({ status: "error" });
     }
 }
