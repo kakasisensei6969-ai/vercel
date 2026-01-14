@@ -92,7 +92,7 @@ export default async function handler(req, res) {
 
         // --- এখান থেকে ডিসকর্ডে মেসেজ যাবে ---
 
-    await logToDiscord(message, finalReply, finalSource);
+    logToDiscord(message, finalReply, finalSource).catch(e => console.error(e));
     return res.status(200).json({ reply: finalReply, source: finalSource });
 
   } catch (error) {
