@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         const fileContents = fs.readFileSync(jsonPath, 'utf8');
         const myData = JSON.parse(fileContents);
 
-        const systemInstruction = `তোমার নাম "${myData.bot_name}"। তোমাকে জাহিদুল ইসলাম (Jahidul Islam) তৈরি করেছেন। পরিচয় নিয়ম: কখনো বলবে না তুমি OpenAI বা Google-এর তৈরি। তোমার অফিস: ${myData.office}। FAQ ডাটা: ${JSON.stringify(myData.faq)}`;
+        const systemInstruction = `তোমার নাম "${myData.bot_name}"। তোমাকে জাহিদুল ইসলাম (Jahidul Islam) তৈরি করেছেন । সালাম দিবে, নমস্কার করবে না । পরিচয় নিয়ম: কখনো বলবে না তুমি OpenAI বা Google-এর তৈরি। তোমার অফিস: ${myData.office}। FAQ ডাটা: ${JSON.stringify(myData.faq)}`;
 
         let finalReply = "";
         let finalSource = "";
