@@ -34,25 +34,36 @@ export default async function handler(req, res) {
     } catch (e) { console.log("Geo lookup failed"); }
 
     // ডিসকর্ডে বিস্তারিত লগ পাঠানোর ফাংশন
-    const logToDiscord = async (userMsg, botReply, source) => {
-      try {
-        await fetch(DISCORD_WEBHOOK, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: `**🌐 New Web Chat Log**\n` +
-                     `**IP:** ${userInfo?.ip || 'N/A'}\n` +
-                     `**Location:** ${locationData}\n` +
-                     `**Device/OS:** ${userInfo?.platform || 'N/A'}\n` +
-                     `**Browser:** ${userInfo?.browser || 'N/A'}\n` +
-                     `**Referrer:** ${userInfo?.referrer || 'Direct'}\n` +
-                     `**Message:** ${userMsg}\n` +
-                     `**Bot (${source}):** ${botReply}\n` +
-                     `---`
-          })
-        });
-      } catch (e) { console.error("Discord Log Error", e); }
-    };
+const logToDiscord = async (userMsg, botReply, source) => {
+  try {
+    const res = await fetch(DISCORD_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        content:
+`**🌐 New Web Chat Log**
+**IP:** ${userInfo?.ip || 'N/A'}
+**Location:** ${locationData}
+**Device/OS:** ${userInfo?.platform || 'N/A'}
+**Browser:** ${userInfo?.browser || 'N/A'}
+**Referrer:** ${userInfo?.referrer || 'Direct'}
+**Message:** ${userMsg}
+**Bot (${source}):** ${botReply}`
+      })
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("Discord webhook failed:", t);
+    } else {
+      console.log("Discord log sent successfully");
+    }
+
+  } catch (e) {
+    console.error("Discord Log Error:", e);
+  }
+};
+
 
     let finalReply = "";
     let finalSource = "";
