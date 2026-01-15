@@ -76,7 +76,7 @@ export default async function handler(req, res) {
         });
 
         // ৪. ডিসকর্ডে বিস্তারিত লগ পাঠানো (এখানেই নাম যোগ করা হয়েছে)
-        fetch(DISCORD_WEBHOOK, {
+       await fetch(DISCORD_WEBHOOK, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
