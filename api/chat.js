@@ -103,7 +103,7 @@ const logToDiscord = async (userMsg, botReply, source) => {
 
         // --- এখান থেকে ডিসকর্ডে মেসেজ যাবে ---
 
-    logToDiscord(message, finalReply, finalSource).catch(e => console.error(e));
+    await logToDiscord(message, finalReply, finalSource).catch(e => console.error(e));
     return res.status(200).json({ reply: finalReply, source: finalSource });
 
   } catch (error) {
